@@ -1,0 +1,74 @@
+.message-wrapper {
+    display: flex;
+    margin-bottom: var(--spacing-md);
+    animation: fadeIn 0.3s ease;
+}
+
+.user-message {
+    justify-content: flex-end;
+}
+
+.assistant-message {
+    justify-content: flex-start;
+}
+
+.message-content {
+    display: flex;
+    gap: var(--spacing-sm);
+    max-width: 70%;
+    align-items: flex-start;
+}
+
+.user-message .message-content {
+    flex-direction: row-reverse;
+}
+
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.message-bubble {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-lg);
+    word-wrap: break-word;
+    position: relative;
+}
+
+.user-message .message-bubble {
+    background: var(--primary-gradient);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.assistant-message .message-bubble {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-bottom-left-radius: 4px;
+}
+
+.message-text {
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+/* System messages (PDF uploads, etc.) */
+.message-wrapper.system-message {
+    justify-content: center;
+}
+
+.system-message .message-bubble {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid var(--success-green);
+    color: var(--success-green);
+    font-size: 0.9rem;
+    text-align: center;
+}
