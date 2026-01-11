@@ -82,12 +82,15 @@ def retrieve(
     
     return context_text
 
-
-if __name__ == "__main__":
+def get_context(query: str, top_k: int = 4) -> str:
     client = get_client()
     try:
-        query = "Can I deduct the municipal taxes or local rates I pay for my business premises?"
-        context = retrieve(client, query)
-        print(context)
+        return retrieve(client, query, top_k)
     finally:
         client.close()
+
+
+if __name__ == "__main__":
+    query = "Can I deduct the municipal taxes or local rates I pay for my business premises?"
+    context = get_context(query)
+    print(context)

@@ -34,6 +34,69 @@ class RedisStorage:
     def clear_history(self, session_id: str) -> None:
         """Clear chat history for a session."""
         self.client.delete(f"chat:{session_id}")
+        # Also delete metadata
+        self.client.delete(f"chat_meta:{session_id}")
+    
+    def get_all_sessions(self) -> List[Dict[str, str]]:
+        """Get all chat sessions with metadata."""
+        sessions = []
+        # Get all chat session keys
+        keys = self.client.keys("chat:*")
+        
+        for key in keys:
+            session_id = key.replace("chat:", "")
+            # Skip metadata keys
+            if session_id.startswith("meta:"):
+                continue
+                
+            history = self.get_history(session_id)
+            if history:
+                # Get first user message as preview
+                first_message = next((msg for msg in history if msg.get("role") == "user"), None)
+                preview = first_message.get("content", "New Chat")[:50] if first_message else "New Chat"
+                
+                # Get or create metadata
+                meta_key = f"chat_meta:{session_id}"
+                meta_json = self.client.get(meta_key)
+                
+                if meta_json:
+                    metadata = json.loads(meta_json)
+                else:
+                    # Create metadata if it doesn't exist
+                    import time
+                    metadata = {
+                        "created_at": int(time.time()),
+                        "updated_at": int(time.time())
+                    }
+                    self.client.set(meta_key, json.dumps(metadata))
+                
+                sessions.append({
+                    "session_id": session_id,
+                    "preview": preview,
+                    "created_at": metadata.get("created_at"),
+                    "updated_at": metadata.get("updated_at")
+                })
+        
+        # Sort by updated_at descending
+        sessions.sort(key=lambda x: x.get("updated_at", 0), reverse=True)
+        return sessions
+    
+    def update_session_timestamp(self, session_id: str) -> None:
+        """Update the last updated timestamp for a session."""
+        import time
+        meta_key = f"chat_meta:{session_id}"
+        meta_json = self.client.get(meta_key)
+        
+        if meta_json:
+            metadata = json.loads(meta_json)
+            metadata["updated_at"] = int(time.time())
+        else:
+            metadata = {
+                "created_at": int(time.time()),
+                "updated_at": int(time.time())
+            }
+        
+        self.client.set(meta_key, json.dumps(metadata))
 
 
 # Singleton instance

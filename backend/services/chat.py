@@ -4,6 +4,7 @@ import weaviate
 from config import settings
 from services.storage import storage
 from services.tokenizer import count_messages_tokens
+from services.rag import get_context
 
 
 class ChatService:
@@ -14,11 +15,11 @@ class ChatService:
             base_url=settings.openai_base_url
         )
         
-        # Initialize Weaviate client
-        self.weaviate_client = weaviate.Client(
-            url=settings.weaviate_url,
-            auth_client_secret=weaviate.AuthApiKey(api_key=settings.weaviate_api_key)
-        )
+        # # Initialize Weaviate client
+        # self.weaviate_client = weaviate.Client(
+        #     url=settings.weaviate_url,
+        #     auth_client_secret=weaviate.AuthApiKey(api_key=settings.weaviate_api_key)
+        # )
     
     def truncate_history(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
         """
@@ -95,15 +96,15 @@ class ChatService:
         # Add user message to history
         history.append({"role": "user", "content": user_message})
         
-        # Truncate if exceeds token limit
-        history = self.truncate_history(history)
-        
         # Prepare messages for LLM
         messages = history.copy()
+
+        # Truncate if exceeds token limit
+        messages = self.truncate_history(messages)
         
         # Add RAG context if enabled
         if include_rag:
-            rag_context = self.get_rag_context(user_message)
+            rag_context = get_context(user_message)
             if rag_context:
                 # Insert context before the last user message
                 context_message = {
@@ -128,6 +129,9 @@ class ChatService:
             
             # Save updated history
             storage.save_history(session_id, history)
+            
+            # Update session timestamp
+            storage.update_session_timestamp(session_id)
             
             return assistant_message
         except Exception as e:

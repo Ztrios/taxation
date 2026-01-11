@@ -125,6 +125,18 @@ async def get_history(session_id: str):
     return {"session_id": session_id, "history": history}
 
 
+@app.get("/sessions")
+async def get_all_sessions():
+    """
+    Get all chat sessions with metadata.
+    """
+    try:
+        sessions = storage.get_all_sessions()
+        return {"sessions": sessions}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

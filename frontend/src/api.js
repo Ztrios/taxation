@@ -59,4 +59,14 @@ export const api = {
 
     return response.json();
   },
+
+  async getAllSessions() {
+    const response = await fetch(`${API_BASE_URL}/sessions`);
+
+    if (!response.ok) {
+      throw new Error('Failed to get sessions');
+    }
+
+    return response.json();
+  },
 };

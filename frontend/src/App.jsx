@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ChatMessage from './components/ChatMessage';
 import InputArea from './components/InputArea';
+import Sidebar from './components/Sidebar';
 import { api } from './api';
 import './App.css';
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [sessionId, setSessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [sessions, setSessions] = useState([]);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -18,13 +20,20 @@ function App() {
     scrollToBottom();
   }, [messages]);
 
-  // Load history on mount
+  // Load all sessions on mount
+  useEffect(() => {
+    loadSessions();
+  }, []);
+
+  // Load history when session changes
   useEffect(() => {
     const loadHistory = async () => {
       try {
         const data = await api.getHistory(sessionId);
         if (data.history && data.history.length > 0) {
           setMessages(data.history);
+        } else {
+          setMessages([]);
         }
       } catch (error) {
         console.error('Failed to load history:', error);
@@ -32,6 +41,44 @@ function App() {
     };
     loadHistory();
   }, [sessionId]);
+
+  const loadSessions = async () => {
+    try {
+      const data = await api.getAllSessions();
+      setSessions(data.sessions || []);
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+    }
+  };
+
+  const handleNewChat = () => {
+    const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setSessionId(newSessionId);
+    setMessages([]);
+  };
+
+  const handleSelectSession = (selectedSessionId) => {
+    setSessionId(selectedSessionId);
+  };
+
+  const handleDeleteSession = async (sessionIdToDelete) => {
+    if (window.confirm('Are you sure you want to delete this chat?')) {
+      try {
+        await api.clearHistory(sessionIdToDelete);
+
+        // Reload sessions
+        await loadSessions();
+
+        // If deleted session was current, create new session
+        if (sessionIdToDelete === sessionId) {
+          handleNewChat();
+        }
+      } catch (error) {
+        console.error('Error deleting session:', error);
+        alert('Failed to delete chat');
+      }
+    }
+  };
 
   const handleSendMessage = async (messageText) => {
     // Add user message to UI
@@ -45,6 +92,9 @@ function App() {
       // Add assistant response to UI
       const assistantMessage = { role: 'assistant', content: response.response };
       setMessages((prev) => [...prev, assistantMessage]);
+
+      // Reload sessions to update the list
+      loadSessions();
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage = {
@@ -88,57 +138,52 @@ function App() {
     }
   };
 
-  const handleClearHistory = async () => {
-    if (window.confirm('Are you sure you want to clear the chat history?')) {
-      try {
-        await api.clearHistory(sessionId);
-        setMessages([]);
-      } catch (error) {
-        console.error('Error clearing history:', error);
-        alert('Failed to clear history');
-      }
-    }
-  };
-
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <h1 className="app-title">
-            <span className="gradient-text">AI Chatbot</span>
-          </h1>
-          <button onClick={handleClearHistory} className="btn btn-secondary">
-            Clear History
-          </button>
-        </div>
-      </header>
-
-      <main className="chat-container">
-        <div className="messages-area">
-          {messages.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-icon">💬</div>
-              <h2>Start a Conversation</h2>
-              <p>Ask me anything or upload a PDF document to get started!</p>
-            </div>
-          ) : (
-            messages.map((msg, index) => (
-              <ChatMessage
-                key={index}
-                message={msg}
-                isUser={msg.role === 'user'}
-              />
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </main>
-
-      <InputArea
-        onSendMessage={handleSendMessage}
-        onUploadFile={handleUploadFile}
-        isLoading={isLoading}
+      <Sidebar
+        sessions={sessions}
+        currentSessionId={sessionId}
+        onNewChat={handleNewChat}
+        onSelectSession={handleSelectSession}
+        onDeleteSession={handleDeleteSession}
       />
+
+      <div className="main-content">
+        <header className="app-header">
+          <div className="header-content">
+            <h1 className="app-title">
+              <span className="gradient-text">Chat</span>
+            </h1>
+          </div>
+        </header>
+
+        <main className="chat-container">
+          <div className="messages-area">
+            {messages.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">💬</div>
+                <h2>Start a Conversation</h2>
+                <p>Ask me anything or upload a PDF document to get started!</p>
+              </div>
+            ) : (
+              messages.map((msg, index) => (
+                <ChatMessage
+                  key={index}
+                  message={msg}
+                  isUser={msg.role === 'user'}
+                />
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </main>
+
+        <InputArea
+          onSendMessage={handleSendMessage}
+          onUploadFile={handleUploadFile}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 }
