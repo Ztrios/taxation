@@ -109,7 +109,7 @@ class ChatService:
                 # Insert context before the last user message
                 context_message = {
                     "role": "system",
-                    "content": f"Relevant context:\n{rag_context}"
+                    "content": f"You are strictly bound to reply based on the relevant context. If relevant context is empty, say that you're sorry and you cannot answer this question.\nRelevant context:\n{rag_context}"
                 }
                 messages.insert(-1, context_message)
         
