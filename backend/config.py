@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     openai_api_key: str
     openai_base_url: str
     model_name: str
+    filter_model_name: str = "meta-llama/llama-3.2-1b-instruct"
     
     # Weaviate Configuration
     weaviate_url: str

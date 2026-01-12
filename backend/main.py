@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 
 from config import settings
-from services.chat import chat_service
+from services.agent import tax_agent_graph
 from services.pdf_handler import pdf_handler
 from services.storage import storage
 
@@ -35,6 +35,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     session_id: str
+    is_relevant: bool
 
 
 class UploadResponse(BaseModel):
@@ -51,15 +52,20 @@ async def root():
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """
-    Handle chat messages with history management and RAG.
+    Handle chat messages via the tax filter agent (filter -> chat/refusal).
     """
     try:
-        response = chat_service.chat(
+        state = {
+            "user_query": request.message,
+            "session_id": request.session_id,
+            "include_rag": request.include_rag,
+        }
+        result = tax_agent_graph.invoke(state)
+        return ChatResponse(
+            response=result.get("final_response", ""),
             session_id=request.session_id,
-            user_message=request.message,
-            include_rag=request.include_rag
+            is_relevant=bool(result.get("is_relevant")),
         )
-        return ChatResponse(response=response, session_id=request.session_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
