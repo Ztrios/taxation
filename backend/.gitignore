@@ -23,3 +23,8 @@ uploads/
 
 # Redis
 dump.rdb
+
+# Screenshots/Images
+*.ps
+*.eps
+weaviate

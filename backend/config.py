@@ -3,6 +3,13 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
+    model_config = {
+        "env_file": ".env",
+        "case_sensitive": False,
+        # Avoid warnings for fields like model_name/model_hf_path
+        "protected_namespaces": ("settings_",),
+    }
+
     # OpenAI/vLLM Configuration
     openai_api_key: str
     openai_base_url: str
@@ -11,6 +18,7 @@ class Settings(BaseSettings):
     # Weaviate Configuration
     weaviate_url: str
     weaviate_api_key: str
+    cohere_apikey: Optional[str] = ""
     
     # Redis Configuration
     redis_host: str = "localhost"
@@ -24,10 +32,4 @@ class Settings(BaseSettings):
     
     # Application Configuration
     upload_dir: str = "./uploads"
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-
-
 settings = Settings()

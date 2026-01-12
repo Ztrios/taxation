@@ -160,3 +160,12 @@ def count_tokens(text: str) -> int:
 ## License
 
 MIT
+
+
+
+{redis-server 
+
+ cd /home/junaid/Legal/LegalApptesting/taxation/backend && uvicorn main:app --host 0.0.0.0 --port 8000
+
+ npm run devv
+}
