@@ -88,9 +88,11 @@ function App() {
 
     try {
       const response = await api.sendMessage(sessionId, messageText);
+      console.log('API response in handleSendMessage:', response);
 
       // Add assistant response to UI
       const assistantMessage = { role: 'assistant', content: response.response };
+      console.log('Assistant message to add:', assistantMessage);
       setMessages((prev) => [...prev, assistantMessage]);
 
       // Reload sessions to update the list

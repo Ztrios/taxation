@@ -1,7 +1,11 @@
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+console.log('API_BASE_URL:', API_BASE_URL);
 
 export const api = {
   async sendMessage(sessionId, message, includeRag = true) {
+    console.log('Sending message to:', `${API_BASE_URL}/chat`);
+    console.log('Request body:', { session_id: sessionId, message, include_rag: includeRag });
+
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
       headers: {
@@ -15,10 +19,13 @@ export const api = {
     });
 
     if (!response.ok) {
+      console.error('Response not OK:', response.status, response.statusText);
       throw new Error('Failed to send message');
     }
 
-    return response.json();
+    const data = await response.json();
+    console.log('Received response:', data);
+    return data;
   },
 
   async uploadPDF(sessionId, file) {
