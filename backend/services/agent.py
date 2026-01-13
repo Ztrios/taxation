@@ -38,7 +38,8 @@ def filter_node(state: AgentState) -> AgentState:
     """
     llm = _build_filter_llm()
     system_prompt = (
-        "You are a strict classifier for TAX-related questions.\n"
+        "You are a bangladeshi lawer specialist in taxation.\n"
+        "You are given a question and you need to determine if it is related to taxation or not.\n"
         "Answer with EXACTLY one token: YES or NO. No punctuation or extra text.\n"
         "If the question mentions tax/taxes/taxation/tax credit/tax deduction/"
         "tax filing/tax compliance/tax policy, respond YES even if the wording is short.\n\n"
