@@ -88,10 +88,10 @@ async def upload_pdf(
         # Extract text
         extracted_text = pdf_handler.extract_text(file_path)
         
-        # Add extracted text to conversation context
+        # Add extracted text to conversation context as user message
         storage.append_message(
             session_id=session_id,
-            role="system",
+            role="user",
             content=f"[PDF Document: {file.filename}]\n{extracted_text}"
         )
         
