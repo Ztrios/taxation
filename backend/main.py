@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -39,8 +40,8 @@ class ChatResponse(BaseModel):
 
 class UploadResponse(BaseModel):
     message: str
-    extracted_text: str
     filename: str
+    file_path: str
 
 
 @app.get("/")
@@ -71,6 +72,7 @@ async def upload_pdf(
 ):
     """
     Upload and process PDF file with OCR.
+    Stores the document in a pending state until the user sends a message.
     """
     # Validate file type
     if not file.filename.endswith('.pdf'):
@@ -88,20 +90,18 @@ async def upload_pdf(
         # Extract text
         extracted_text = pdf_handler.extract_text(file_path)
         
-        # Add extracted text to conversation context as user message
-        storage.append_message(
+        # Store the pending document (don't add to chat history yet)
+        storage.add_pending_document(
             session_id=session_id,
-            role="user",
-            content=f"[PDF Document: {file.filename}]\n{extracted_text}"
+            filename=file.filename,
+            file_path=file_path,
+            extracted_text=extracted_text
         )
         
-        # Clean up file (optional - comment out if you want to keep uploads)
-        # os.remove(file_path)
-        
         return UploadResponse(
-            message="PDF processed successfully",
-            extracted_text=extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text,
-            filename=file.filename
+            message="PDF uploaded successfully",
+            filename=file.filename,
+            file_path=file_path
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
@@ -135,6 +135,23 @@ async def get_all_sessions():
         return {"sessions": sessions}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/documents/{filename}")
+async def get_document(filename: str):
+    """
+    Serve uploaded PDF documents.
+    """
+    file_path = os.path.join(settings.upload_dir, filename)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    return FileResponse(
+        file_path,
+        media_type="application/pdf",
+        filename=filename
+    )
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [sessions, setSessions] = useState([]);
+  const [pendingDocuments, setPendingDocuments] = useState([]);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -35,6 +36,8 @@ function App() {
         } else {
           setMessages([]);
         }
+        // Clear pending documents when switching sessions
+        setPendingDocuments([]);
       } catch (error) {
         console.error('Failed to load history:', error);
       }
@@ -55,6 +58,7 @@ function App() {
     const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setSessionId(newSessionId);
     setMessages([]);
+    setPendingDocuments([]);
   };
 
   const handleSelectSession = (selectedSessionId) => {
@@ -81,10 +85,26 @@ function App() {
   };
 
   const handleSendMessage = async (messageText) => {
-    // Add user message to UI
-    const userMessage = { role: 'user', content: messageText };
+    // Build the complete user message with pending documents
+    let completeMessageContent = messageText;
+
+    if (pendingDocuments.length > 0) {
+      // Add document tags to match backend format
+      let docContent = '';
+      for (const doc of pendingDocuments) {
+        docContent += `\n<user_document filename="${doc.filename}" file_path="${doc.file_path}">\n[Document content will be processed by backend]\n</user_document>\n`;
+      }
+      completeMessageContent = docContent + '\n' + messageText;
+    }
+
+    // Add user message to UI with document tags
+    const userMessage = { role: 'user', content: completeMessageContent };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
+
+    // Clear pending documents from UI (they're now part of the message)
+    const docsToSend = [...pendingDocuments];
+    setPendingDocuments([]);
 
     try {
       const response = await api.sendMessage(sessionId, messageText);
@@ -112,32 +132,27 @@ function App() {
   const handleUploadFile = async (file) => {
     setIsLoading(true);
 
-    // Add system message
-    const uploadMessage = {
-      role: 'system',
-      content: `Uploading ${file.name}...`,
-    };
-    setMessages((prev) => [...prev, uploadMessage]);
-
     try {
       const response = await api.uploadPDF(sessionId, file);
 
-      // Update with success message
-      const successMessage = {
-        role: 'system',
-        content: `✅ ${response.message}: ${file.name}\n\nExtracted preview: ${response.extracted_text}`,
-      };
-      setMessages((prev) => [...prev.slice(0, -1), successMessage]);
+      // Add to pending documents (not to messages yet)
+      setPendingDocuments((prev) => [
+        ...prev,
+        {
+          filename: response.filename,
+          file_path: response.file_path,
+        },
+      ]);
     } catch (error) {
       console.error('Error uploading file:', error);
-      const errorMessage = {
-        role: 'system',
-        content: `❌ Failed to upload ${file.name}. Please try again.`,
-      };
-      setMessages((prev) => [...prev.slice(0, -1), errorMessage]);
+      alert(`Failed to upload ${file.name}. Please try again.`);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRemovePendingDocument = (index) => {
+    setPendingDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -161,20 +176,22 @@ function App() {
 
         <main className="chat-container">
           <div className="messages-area">
-            {messages.length === 0 ? (
+            {messages.filter(msg => msg.role !== 'system').length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">💬</div>
                 <h2>Start a Conversation</h2>
                 <p>Ask me anything or upload a PDF document to get started!</p>
               </div>
             ) : (
-              messages.map((msg, index) => (
-                <ChatMessage
-                  key={index}
-                  message={msg}
-                  isUser={msg.role === 'user'}
-                />
-              ))
+              messages
+                .filter(msg => msg.role !== 'system') // Don't show system prompts
+                .map((msg, index) => (
+                  <ChatMessage
+                    key={index}
+                    message={msg}
+                    isUser={msg.role === 'user'}
+                  />
+                ))
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -184,6 +201,8 @@ function App() {
           onSendMessage={handleSendMessage}
           onUploadFile={handleUploadFile}
           isLoading={isLoading}
+          pendingDocuments={pendingDocuments}
+          onRemovePendingDocument={handleRemovePendingDocument}
         />
       </div>
     </div>

@@ -81,9 +81,19 @@ class ChatService:
         Returns:
             Dict[str, str]: System message dictionary
         """
+        sys_ins = f"""
+        You are a Bangladeshi lawyer specializing in taxation. You are working as a tax consultant.
+        # PRIMARY DIRECTIVES
+        1. You are strictly bound to reply based on the context provided in <knowledge_base> tag.
+        2. If user query can not be answered based on the context provided in <knowledge_base> tag, you should reply with a message saying "I don't have enough information to answer this question."
+        3. The user may provide specific documents in the <user_document> tag.
+        4. Analyze the documents and provide the comparison with the context.
+        5. Do not use references like "Context 2" or "Context 3". Instead, use the actual references used in the context like "Section 45, Act 17" or "Law no. 32".
+        """
+
         return {
             "role": "system",
-            "content": "You are strictly bound to reply based on the relevant context. If relevant context is empty, say that you're sorry and you cannot answer this question.\n\n<knowledge_base>\n</knowledge_base>"
+            "content": sys_ins + "\n\n<knowledge_base>\n</knowledge_base>"
         }
     
     def _extract_context_identifiers(self, context_text: str) -> set:
@@ -204,8 +214,24 @@ class ChatService:
         if not history:
             history.append(self._initialize_system_prompt())
         
+        # Check for pending documents
+        pending_docs = storage.get_pending_documents(session_id)
+        
+        # Build the complete user message with documents
+        complete_message = user_message
+        if pending_docs:
+            # Add document content in <user_document> tags with file_path
+            doc_content = ""
+            for doc in pending_docs:
+                doc_content += f"\n<user_document filename=\"{doc['filename']}\" file_path=\"{doc['file_path']}\">\n{doc['extracted_text']}\n</user_document>\n"
+            
+            complete_message = doc_content + "\n" + user_message
+            
+            # Clear pending documents after including them
+            storage.clear_pending_documents(session_id)
+        
         # Add user message to history
-        history.append({"role": "user", "content": user_message})
+        history.append({"role": "user", "content": complete_message})
         
         # Prepare messages for LLM
         messages = history.copy()

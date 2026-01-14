@@ -91,6 +91,6 @@ def get_context(query: str, top_k: int = 4) -> str:
 
 
 if __name__ == "__main__":
-    query = "Can I deduct the municipal taxes or local rates I pay for my business premises?"
+    query = "if my yearly income is 600000 and expense is 500000. i can save only 100000. will i have to pay tax"
     context = get_context(query)
     print(context)

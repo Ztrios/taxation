@@ -97,6 +97,32 @@ class RedisStorage:
             }
         
         self.client.set(meta_key, json.dumps(metadata))
+    
+    def add_pending_document(self, session_id: str, filename: str, file_path: str, extracted_text: str) -> None:
+        """Add a document to the pending list for this session."""
+        pending_key = f"pending_docs:{session_id}"
+        pending_docs = self.get_pending_documents(session_id)
+        
+        pending_docs.append({
+            "filename": filename,
+            "file_path": file_path,
+            "extracted_text": extracted_text
+        })
+        
+        self.client.set(pending_key, json.dumps(pending_docs))
+    
+    def get_pending_documents(self, session_id: str) -> List[Dict[str, str]]:
+        """Get all pending documents for this session."""
+        pending_key = f"pending_docs:{session_id}"
+        pending_json = self.client.get(pending_key)
+        if pending_json:
+            return json.loads(pending_json)
+        return []
+    
+    def clear_pending_documents(self, session_id: str) -> None:
+        """Clear all pending documents for this session."""
+        pending_key = f"pending_docs:{session_id}"
+        self.client.delete(pending_key)
 
 
 # Singleton instance

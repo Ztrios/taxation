@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import './InputArea.css';
 
-const InputArea = ({ onSendMessage, onUploadFile, isLoading }) => {
+const InputArea = ({ onSendMessage, onUploadFile, isLoading, pendingDocuments = [], onRemovePendingDocument }) => {
     const [message, setMessage] = useState('');
     const fileInputRef = useRef(null);
 
@@ -26,6 +26,26 @@ const InputArea = ({ onSendMessage, onUploadFile, isLoading }) => {
 
     return (
         <div className="input-area">
+            {/* Display pending documents */}
+            {pendingDocuments.length > 0 && (
+                <div className="pending-documents">
+                    {pendingDocuments.map((doc, index) => (
+                        <div key={index} className="pending-document">
+                            <span className="pdf-icon">📄</span>
+                            <span className="document-name">{doc.filename}</span>
+                            <button
+                                type="button"
+                                className="remove-doc-btn"
+                                onClick={() => onRemovePendingDocument(index)}
+                                title="Remove document"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="input-form">
                 <button
                     type="button"
